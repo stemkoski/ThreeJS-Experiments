@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<!-- blank favicon -->
+    <link href="data:image/x-icon;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQEAYAAABPYyMiAAAABmJLR0T///////8JWPfcAAAACXBIWXMAAABIAAAASABGyWs+AAAAF0lEQVRIx2NgGAWjYBSMglEwCkbBSAcACBAAAeaR9cIAAAAASUVORK5CYII=" rel="icon" type="image/x-icon" />
+	<title>three.js example</title>
+	<style>
+		body { margin: 0; }
+
+		.lil-gui
+		{
+			--font-size: 14px;
+			--input-font-size: 12px;
+	    --padding: 8px;
+	    --spacing: 8px;
+	    --slider-knob-width: 3px;
+  	}
+	</style>
+</head>
+
+<body>
+
+<script src="js/three.js"></script>
+<script src="js/OrbitControls.js"></script>
+<script src="js/lil-gui.js"></script>
+
+<script>
+
+// standard scene elements
+
+let scene = new THREE.Scene();
+scene.background = new THREE.Color( 0xAACCFF );
+
+let camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
+camera.position.set(0, 0, 4);
+
+let ambientLight = new THREE.AmbientLight(0x222222, 1);
+scene.add(ambientLight);
+
+let directionalLight = new THREE.DirectionalLight(0xDDDDDD, 1);
+directionalLight.position.set(1, 4, 2);
+directionalLight.target.position.set(0, 0, 0);
+scene.add(directionalLight);
+scene.add(directionalLight.target);
+
+let renderer = new THREE.WebGLRenderer( {antialias: true} );
+renderer.setSize( window.innerWidth, window.innerHeight );
+document.body.appendChild( renderer.domElement );
+
+// use for loading textures
+let loader = new THREE.TextureLoader();
+
+// optional camera movement controls
+let controls = new THREE.OrbitControls( camera, renderer.domElement );
+
+// optional for window resizing
+window.addEventListener( 'resize', onWindowResize );
+
+// custom scene elements
+
+// ground
+let floorSize = 40; 
+let floorTexture = loader.load( 'images/checkerboard.jpg' );
+floorTexture.wrapS = floorTexture.wrapT = THREE.RepeatWrapping; 
+floorTexture.repeat.set( floorSize / 4, floorSize / 4 );
+let floorGeometry = new THREE.PlaneGeometry(floorSize, floorSize);
+let floorMaterial = new THREE.MeshBasicMaterial({
+  map: floorTexture,
+  side: THREE.DoubleSide,
+});
+let floor = new THREE.Mesh(floorGeometry, floorMaterial);
+floor.position.set(0, -1, 0);
+floor.rotation.x = -Math.PI / 2;
+scene.add(floor);
+
+// a box
+let geometry = new THREE.BoxGeometry( 1, 1, 1 );
+let material = new THREE.MeshLambertMaterial( { color: 0xCC88FF } );
+let mesh = new THREE.Mesh( geometry, material );
+mesh.position.set(0, 0, 0);
+scene.add( mesh );
+
+// integrated gui
+
+var GUI = lil.GUI;
+let gui = new GUI();
+
+let guiParams = { color: 0xCC88FF, speed: 0.5, shape: "Cube", floorVisible: true };
+
+gui.add(guiParams, 'floorVisible').name("show floor")
+   .onChange( function(value) { floor.visible = value } );
+
+let shapeGeometry = {};
+shapeGeometry["Cube"]       = new THREE.BoxGeometry( 1, 1, 1 );
+shapeGeometry["Pyramid"]    = new THREE.ConeGeometry( 1, 1, 4 );
+shapeGeometry["Tetrahedron"] = new THREE.TetrahedronGeometry( 1 );
+shapeGeometry["Octahedron"] = new THREE.OctahedronGeometry( 1 );
+
+
+let cubeFolder = gui.addFolder('Mesh Properties')
+cubeFolder.add(mesh.position, 'x', -2, 2, 0.01)
+cubeFolder.add(mesh.position, 'y', -2, 2, 0.01)
+cubeFolder.add(mesh.position, 'z', -2, 2, 0.01)
+cubeFolder.add( guiParams, 'speed', 0, 1, 0.01).name("rotate speed");
+cubeFolder.addColor( guiParams, 'color' )
+          .onChange( function() { mesh.material.color.set( guiParams.color ) } );
+let shapeField = cubeFolder.add( guiParams, 'shape', [ 'Cube', 'Pyramid', 'Tetrahedron', 'Octahedron' ] )
+					.onChange( function(value) { mesh.geometry = shapeGeometry[value] } );
+
+function changeShape()
+{
+	let n = Object.keys(shapeGeometry).length;
+	let randomIndex = Math.floor( n * Math.random() );
+	let randomName = Object.keys(shapeGeometry)[randomIndex];
+	console.log(randomName);
+	shapeField.setValue( randomName );
+	// auto invokes function that does this: mesh.geometry = shapeGeometry[randomName];
+}
+
+guiParams.changeShape = changeShape;
+
+gui.add( guiParams, "changeShape" ).name("set random shape");
+
+cubeFolder.open();
+
+
+function update()
+{
+	mesh.rotation.x += 0.02 * guiParams.speed;
+	mesh.rotation.y += 0.02 * guiParams.speed;
+}
+
+function render()
+{
+	renderer.render( scene, camera );
+}
+
+function onWindowResize()
+{
+	camera.aspect = window.innerWidth / window.innerHeight;
+	camera.updateProjectionMatrix();
+	renderer.setSize( window.innerWidth, window.innerHeight );
+}
+
+function loop() 
+{
+	requestAnimationFrame( loop );
+	update();
+	render();
+};
+
+loop();
+
+</script>
+</body>
+</html>
